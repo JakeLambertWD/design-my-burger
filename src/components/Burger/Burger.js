@@ -8,7 +8,6 @@ const burger = props => {
 		.map(ingKey => {
 			// Array will constructed if it contains an integer (greater than 0)
 			return [...Array(props.ingredients[ingKey])].map((_, i) => {
-				console.log(i);
 				return <BurgerIngredient key={ingKey + i} type={ingKey} />;
 			});
 		})

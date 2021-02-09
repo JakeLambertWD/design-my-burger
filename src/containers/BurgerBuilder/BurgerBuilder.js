@@ -16,7 +16,7 @@ const TOPPING_PRICES = {
 };
 
 class BurgerBuilder extends Component {
-	// DATA
+	// STATE
 	state = {
 		ingredients: null,
 		totalPrice: 4,
@@ -26,6 +26,7 @@ class BurgerBuilder extends Component {
 		error: false
 	};
 
+	// Retreive Firebase data
 	componentDidMount() {
 		axios
 			.get(
@@ -39,7 +40,7 @@ class BurgerBuilder extends Component {
 			});
 	}
 
-	// PURCHASE BUTTON DISABLED - true or false
+	// PURCHASE BUTTON DISABLED
 	updatePurchaseState(currentIngredients) {
 		const sum = Object.keys(currentIngredients) // [salad, bacon, cheese, meat]
 			.map(igKey => {
@@ -107,36 +108,26 @@ class BurgerBuilder extends Component {
 
 	// CONTINUE ORDER
 	purchaseContinueHandler = () => {
-		// Load Spinner
-		this.setState({ loading: true });
+		// Encodes a URI component
+		const queryParams = [];
+		// ingredients
+		for (let i in this.state.ingredients) {
+			queryParams.push(
+				encodeURIComponent(i) +
+					'=' +
+					encodeURIComponent(this.state.ingredients[i]) // [bacon=3,cheese=0,meat=1,salad=0]
+			);
+		}
+		// price
+		queryParams.push('price=' + this.state.totalPrice); // [bacon=3,cheese=0,meat=1,salad=0,price=4.2]
 
-		// Order
-		const order = {
-			ingredients: this.state.ingredients,
-			price: this.state.totalPrice,
-			customer: {
-				name: 'max',
-				address: {
-					street: 'teststreet1',
-					postcode: 'n1 2bh',
-					country: 'England'
-				},
-				email: 'test@test.com'
-			},
-			deliveryMethod: 'Fastest'
-		};
-
-		// POST request
-		axios
-			.post('/orders.json', order)
-			.then(res => {
-				// Remove Spinner & Modal
-				this.setState({ loading: false, purchasing: false });
-			})
-			.catch(err => {
-				// Remove Spinner & Modal
-				this.setState({ loading: false, purchasing: false });
-			});
+		// Join array with & symbol and converts to a string
+		const queryString = queryParams.join('&');
+		// Custom entry into the history stack
+		this.props.history.push({
+			pathname: '/checkout',
+			search: '?' + queryString
+		}); // /checkout?bacon=0&cheese=0&meat=0&salad=3&price=5.2
 	};
 
 	render() {
@@ -146,12 +137,11 @@ class BurgerBuilder extends Component {
 		};
 		// loop through all the keys in our object
 		for (let key in disabledInfo) {
-			// check if the values of our keys are true
+			// check if the values of our keys are a positive number
 			disabledInfo[key] = disabledInfo[key] <= 0;
 			// expected outcome - {salad: true, bacon: false, ...}
 		}
 
-		// Set Order summary to Null
 		let orderSummary = null;
 		// Set Burger to the Spinner
 		let burger = this.state.error ? <p>Can't load ingredients</p> : <Spinner />;

@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-
 import Button from '../../../components/UI/Button/Button';
 import Spinner from '../../../components/UI/Spinner/Spinner';
 import './ContactData.css';
@@ -15,7 +14,12 @@ class ContactData extends Component {
 					type: 'text',
 					placeholder: 'Your Name'
 				},
-				value: ''
+				value: '',
+				validation: {
+					required: true
+				},
+				valid: false,
+				touched: false
 			},
 			street: {
 				elementType: 'input',
@@ -23,7 +27,12 @@ class ContactData extends Component {
 					type: 'text',
 					placeholder: 'Street'
 				},
-				value: ''
+				value: '',
+				validation: {
+					required: true
+				},
+				valid: false,
+				touched: false
 			},
 			zipCode: {
 				elementType: 'input',
@@ -31,7 +40,14 @@ class ContactData extends Component {
 					type: 'text',
 					placeholder: 'ZIP Code'
 				},
-				value: ''
+				value: '',
+				validation: {
+					required: true,
+					minLength: 5,
+					maxLength: 5
+				},
+				valid: false,
+				touched: false
 			},
 			country: {
 				elementType: 'input',
@@ -39,7 +55,12 @@ class ContactData extends Component {
 					type: 'text',
 					placeholder: 'Country'
 				},
-				value: ''
+				value: '',
+				validation: {
+					required: true
+				},
+				valid: false,
+				touched: false
 			},
 			email: {
 				elementType: 'input',
@@ -47,7 +68,12 @@ class ContactData extends Component {
 					type: 'email',
 					placeholder: 'Your E-Mail'
 				},
-				value: ''
+				value: '',
+				validation: {
+					required: true
+				},
+				valid: false,
+				touched: false
 			},
 			deliveryMethod: {
 				elementType: 'select',
@@ -57,27 +83,33 @@ class ContactData extends Component {
 						{ value: 'cheapest', displayValue: 'Cheapest' }
 					]
 				},
-				value: ''
+				value: 'Fastest',
+				validation: {},
+				valid: true,
+				touched: false
 			}
 		},
+		formIsValid: false,
 		loading: false
 	};
 
-	// Form submit event handler
+	// 1. Form submit event handler
 	orderHandler = event => {
 		event.preventDefault();
+		// load spinner
 		this.setState({ loading: true });
 		const formData = {};
-		for (let formElementIdentifier in this.state.orderForm) {
-			formData[formElementIdentifier] = this.state.orderForm[
-				formElementIdentifier
-			].value;
+		// get the contact form data
+		for (let target in this.state.orderForm) {
+			formData[target] = this.state.orderForm[target].value;
 		}
+		// get the details for the whole order
 		const order = {
 			ingredients: this.props.ingredients,
-			price: this.props.price,
+			price: this.props.totalPrice,
 			orderData: formData
 		};
+		// post to firebase
 		axios
 			.post('/orders.json', order)
 			.then(response => {
@@ -89,17 +121,63 @@ class ContactData extends Component {
 			});
 	};
 
-	// onChange event handler
+	// 2. Validate form fields
+	checkValidity(value, rules) {
+		let isValid = true;
+
+		// Check the field is not blank
+		if (rules.required) {
+			// trim any white space
+			isValid = value.trim() !== '' && isValid;
+		}
+
+		// Check minimum length
+		if (rules.minLength) {
+			isValid = value.length >= rules.minLength && isValid;
+		}
+
+		// Check maximum length
+		if (rules.maxLength) {
+			isValid = value.length <= rules.maxLength && isValid;
+		}
+
+		return isValid;
+	}
+
+	// 3. onChange event handler
 	inputChangedHandler = (event, inputIdentifier) => {
+		// order form
 		const updatedOrderForm = {
 			...this.state.orderForm
 		};
+		// single form element
 		const updatedFormElement = {
 			...updatedOrderForm[inputIdentifier]
 		};
+		// value of single form element
 		updatedFormElement.value = event.target.value;
+
+		// Validation
+		updatedFormElement.valid = this.checkValidity(
+			// value
+			updatedFormElement.value,
+			// validation rules
+			updatedFormElement.validation
+		);
+		// input field has been touched (used)
+		updatedFormElement.touched = true;
+
+		// update form element
 		updatedOrderForm[inputIdentifier] = updatedFormElement;
-		this.setState({ orderForm: updatedOrderForm });
+
+		// disable button when form isn't valid
+		let formIsValid = true;
+		for (let target in updatedOrderForm) {
+			formIsValid = updatedOrderForm[target].valid && formIsValid;
+		}
+
+		// update the whole form in the state
+		this.setState({ orderForm: updatedOrderForm, formIsValid: formIsValid });
 	};
 
 	render() {
@@ -115,16 +193,24 @@ class ContactData extends Component {
 		// Form
 		let form = (
 			<form onSubmit={this.orderHandler}>
+				{/* Form elements */}
 				{formElementsArray.map(formElement => (
 					<Input
 						key={formElement.id}
 						elementType={formElement.config.elementType}
 						elementConfig={formElement.config.elementConfig}
 						value={formElement.config.value}
+						invalid={!formElement.config.valid}
+						shouldValidate={formElement.config.validation.required}
+						touched={formElement.config.touched}
+						valueType={formElement.id}
 						changed={event => this.inputChangedHandler(event, formElement.id)}
 					/>
 				))}
-				<Button btnType='Success'>ORDER</Button>
+				{/* Button */}
+				<Button btnType='Success' disabled={!this.state.formIsValid}>
+					ORDER
+				</Button>
 			</form>
 		);
 

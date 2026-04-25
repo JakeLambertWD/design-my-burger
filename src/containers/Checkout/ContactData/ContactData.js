@@ -3,6 +3,7 @@ import Button from "../../../components/UI/Button/Button";
 import Spinner from "../../../components/UI/Spinner/Spinner";
 import "./ContactData.css";
 import Input from "../../../components/UI/Form/Input";
+import axios from "../../../axios-orders";
 
 class ContactData extends Component {
   state = {
@@ -108,8 +109,15 @@ class ContactData extends Component {
       price: this.props.totalPrice,
       orderData: formData,
     };
-    this.setState({ loading: false });
-    this.props.history.push("/");
+    axios
+      .post("/orders.json", order)
+      .then(() => {
+        this.setState({ loading: false });
+        this.props.history.push("/");
+      })
+      .catch(() => {
+        this.setState({ loading: false });
+      });
   };
 
   // 2. Validate form fields
